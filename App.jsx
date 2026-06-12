@@ -61,8 +61,14 @@ function whyNow(t) {
 
 /* ── Claude API (deep-dives) ── */
 async function askClaude(prompt) {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
   const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
     body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] }),
   });
   if (!res.ok) throw new Error(`API ${res.status}`);
@@ -594,18 +600,16 @@ export default function Meridian() {
   const [deals, setDealsRaw] = useState([]);
   const [navOpen, setNavOpen] = useState(true);
 
-  /* Persist CRM via storage API */
+  /* Persist CRM via localStorage */
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await window.storage.get("meridian-crm-deals");
-        if (r?.value) setDealsRaw(JSON.parse(r.value));
-      } catch { /* no saved deals yet */ }
-    })();
+    try {
+      const saved = localStorage.getItem("meridian-crm-deals");
+      if (saved) setDealsRaw(JSON.parse(saved));
+    } catch { /* no saved deals yet */ }
   }, []);
   const setDeals = (d) => {
     setDealsRaw(d);
-    (async () => { try { await window.storage.set("meridian-crm-deals", JSON.stringify(d)); } catch (e) { console.error("save failed", e); } })();
+    try { localStorage.setItem("meridian-crm-deals", JSON.stringify(d)); } catch (e) { console.error("save failed", e); }
   };
 
   /* Live data: Top 500 in two CoinGecko pages */
